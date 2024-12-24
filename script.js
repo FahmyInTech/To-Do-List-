@@ -63,12 +63,12 @@ function editTask(task, li) {
   input.type = 'text';
   input.value = task.task;
   
-  // Replace the task text with the input field
+  
   li.replaceChild(input, taskTextSpan);
   
   input.focus();
   
-  // Save the edited task when the input field loses focus or on Enter key press
+  
   input.addEventListener('blur', () => saveEditedTask(task, li, input, checkbox));
   input.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -92,7 +92,7 @@ function saveEditedTask(task, li, input, checkbox) {
     saveTasksToLocalStorage(tasks);
   }
   
-  // Create a new task span and replace the input field with it
+  
   const newTaskSpan = document.createElement('span');
   newTaskSpan.classList.add('task-text');
   newTaskSpan.textContent = task.task;
@@ -116,7 +116,7 @@ function saveEditedTask(task, li, input, checkbox) {
   taskActionsDiv.appendChild(editButton);
   taskActionsDiv.appendChild(deleteButton);
   
-  // Restore the checkbox after editing
+  
   const restoredCheckbox = document.createElement('input');
   restoredCheckbox.type = 'checkbox';
   restoredCheckbox.className = 'checkbox';
@@ -134,7 +134,7 @@ function toggleCompletion(task, li, checkbox) {
     saveTasksToLocalStorage(tasks);
   }
 
-  // Update task appearance
+  
   li.classList.toggle('completed', task.completed);
 }
 
