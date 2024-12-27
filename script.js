@@ -1,40 +1,43 @@
-// Select elements
+// DOM Elements
 const taskInput = document.getElementById('taskInput');
 const addTaskButton = document.getElementById('addTaskButton');
 const taskList = document.getElementById('taskList');
 
-// Load tasks from localStorage
+// Initialize: Load tasks from localStorage when the page is ready
 document.addEventListener('DOMContentLoaded', loadTasks);
 
-// Add task
-addTaskButton.addEventListener('click', debounce(addTask, 300));
-taskInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    debounce(addTask, 300)();
+// Event Listeners
+addTaskButton.addEventListener('click', debounce(handleAddTask, 300));
+taskInput.addEventListener('keypress', (event) => {
+  if (event.key === 'Enter') {
+    debounce(handleAddTask, 300)();
   }
 });
 
 // Add a new task
-function addTask() {
-  const task = taskInput.value.trim();
-  if (!task) {
+function handleAddTask() {
+  const taskText = taskInput.value.trim();
+  if (!taskText) {
     alert('Task cannot be empty!');
     return;
   }
 
-  const tasks = getTasksFromLocalStorage();
-  const newTask = { task, completed: false };
+  const newTask = { task: taskText, completed: false };
+  const tasks = getTasksFromStorage();
+
   tasks.push(newTask);
-  saveTasksToLocalStorage(tasks);
+  saveTasksToStorage(tasks);
+
   renderTask(newTask);
-  taskInput.value = '';
+  taskInput.value = ''; // Clear the input field
 }
 
-// Render a task
+// Display a single task
 function renderTask(task) {
-  const li = document.createElement('li');
-  li.classList.toggle('completed', task.completed);
-  li.innerHTML = `
+  const taskItem = document.createElement('li');
+  taskItem.classList.toggle('completed', task.completed);
+
+  taskItem.innerHTML = `
     <span class="task-text">${task.task}</span>
     <div class="task-actions">
       <button class="edit">Edit</button>
@@ -43,126 +46,100 @@ function renderTask(task) {
     </div>
   `;
 
-  const editButton = li.querySelector('.edit');
-  const deleteButton = li.querySelector('.delete');
-  const checkbox = li.querySelector('.checkbox');
+  // Event handlers for task actions
+  taskItem.querySelector('.edit').addEventListener('click', () => editTask(task, taskItem));
+  taskItem.querySelector('.delete').addEventListener('click', () => deleteTask(task, taskItem));
+  taskItem.querySelector('.checkbox').addEventListener('change', (e) =>
+    toggleTaskCompletion(task, taskItem, e.target.checked)
+  );
 
-  editButton.addEventListener('click', () => editTask(task, li));
-  deleteButton.addEventListener('click', () => deleteTask(task, li));
-  checkbox.addEventListener('change', () => toggleCompletion(task, li, checkbox));
-
-  taskList.appendChild(li);
+  taskList.appendChild(taskItem);
 }
 
-function editTask(task, li) {
-  const taskTextSpan = li.querySelector('.task-text');
-  const checkbox = li.querySelector('.checkbox');
-  
-  // Make the task text editable
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = task.task;
-  
-  
-  li.replaceChild(input, taskTextSpan);
-  
-  input.focus();
-  
-  
-  input.addEventListener('blur', () => saveEditedTask(task, li, input, checkbox));
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      saveEditedTask(task, li, input, checkbox);
+// Edit an existing task
+function editTask(task, taskItem) {
+  const currentTextElement = taskItem.querySelector('.task-text');
+  const inputField = document.createElement('input');
+  inputField.type = 'text';
+  inputField.value = task.task;
+
+  taskItem.replaceChild(inputField, currentTextElement);
+  inputField.focus();
+
+  inputField.addEventListener('blur', () => saveEditedTask(task, taskItem, inputField));
+  inputField.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+      saveEditedTask(task, taskItem, inputField);
     }
   });
 }
 
-function saveEditedTask(task, li, input, checkbox) {
-  const newTaskText = input.value.trim();
-  if (!newTaskText) {
-    alert('Mission cannot be empty!');
+// Save the edited task
+function saveEditedTask(task, taskItem, inputField) {
+  const updatedText = inputField.value.trim();
+  if (!updatedText) {
+    alert('Task cannot be empty!');
     return;
   }
-  
-  task.task = newTaskText;
-  const tasks = getTasksFromLocalStorage();
-  const index = tasks.findIndex(t => t.task === task.task);
-  if (index !== -1) {
-    tasks[index] = task;
-    saveTasksToLocalStorage(tasks);
-  }
-  
-  
-  const newTaskSpan = document.createElement('span');
-  newTaskSpan.classList.add('task-text');
-  newTaskSpan.textContent = task.task;
-  
-  li.replaceChild(newTaskSpan, input);
-  
-  // Re-attach the "Edit" and "Delete" buttons after saving the task
-  const editButton = document.createElement('button');
-  editButton.textContent = 'Edit';
-  editButton.className = 'edit';
-  
-  const deleteButton = document.createElement('button');
-  deleteButton.textContent = 'Delete';
-  deleteButton.className = 'delete';
-  
-  editButton.addEventListener('click', () => editTask(task, li));
-  deleteButton.addEventListener('click', () => deleteTask(task, li));
 
-  const taskActionsDiv = li.querySelector('.task-actions');
-  taskActionsDiv.innerHTML = ''; // Clear the existing buttons
-  taskActionsDiv.appendChild(editButton);
-  taskActionsDiv.appendChild(deleteButton);
-  
-  
-  const restoredCheckbox = document.createElement('input');
-  restoredCheckbox.type = 'checkbox';
-  restoredCheckbox.className = 'checkbox';
-  restoredCheckbox.checked = task.completed;
-  restoredCheckbox.addEventListener('change', () => toggleCompletion(task, li, restoredCheckbox));
-  taskActionsDiv.appendChild(restoredCheckbox);
+  task.task = updatedText;
+
+  const tasks = getTasksFromStorage();
+  const taskIndex = tasks.findIndex((t) => t.task === task.task);
+
+  if (taskIndex !== -1) {
+    tasks[taskIndex] = task;
+    saveTasksToStorage(tasks);
+  }
+
+  // Restore the display
+  const updatedTextElement = document.createElement('span');
+  updatedTextElement.className = 'task-text';
+  updatedTextElement.textContent = task.task;
+
+  taskItem.replaceChild(updatedTextElement, inputField);
 }
 
-function toggleCompletion(task, li, checkbox) {
-  task.completed = checkbox.checked;
-  const tasks = getTasksFromLocalStorage();
-  const index = tasks.findIndex(t => t.task === task.task);
-  if (index !== -1) {
-    tasks[index] = task;
-    saveTasksToLocalStorage(tasks);
+// Toggle task completion
+function toggleTaskCompletion(task, taskItem, isCompleted) {
+  task.completed = isCompleted;
+
+  const tasks = getTasksFromStorage();
+  const taskIndex = tasks.findIndex((t) => t.task === task.task);
+
+  if (taskIndex !== -1) {
+    tasks[taskIndex] = task;
+    saveTasksToStorage(tasks);
   }
 
-  
-  li.classList.toggle('completed', task.completed);
+  taskItem.classList.toggle('completed', isCompleted);
 }
 
 // Delete a task
-function deleteTask(task, li) {
-  const tasks = getTasksFromLocalStorage();
+function deleteTask(task, taskItem) {
+  const tasks = getTasksFromStorage();
   const updatedTasks = tasks.filter((t) => t.task !== task.task);
-  saveTasksToLocalStorage(updatedTasks);
-  li.remove();
+
+  saveTasksToStorage(updatedTasks);
+  taskItem.remove();
 }
 
-// Load tasks on page refresh
+// Load tasks from localStorage
 function loadTasks() {
-  const tasks = getTasksFromLocalStorage();
+  const tasks = getTasksFromStorage();
   tasks.forEach(renderTask);
 }
 
-// Get tasks from localStorage
-function getTasksFromLocalStorage() {
+// LocalStorage utility functions
+function getTasksFromStorage() {
   return JSON.parse(localStorage.getItem('tasks')) || [];
 }
 
-// Save tasks to localStorage
-function saveTasksToLocalStorage(tasks) {
+function saveTasksToStorage(tasks) {
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
-// Debounce function
+// Utility: Debounce function
 function debounce(func, delay) {
   let timeout;
   return function (...args) {
