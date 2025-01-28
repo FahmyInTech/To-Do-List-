@@ -1,21 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>To-Do List</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="container">
-      <h1>To Do List</h1>
-      <div class="input-container">
-        <input type="text" id="taskInput" placeholder="Enter your mission" />
-        <button id="addTaskButton">+</button>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced To-Do List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Enable dark mode in Tailwind CSS
+    tailwind.config = {
+      darkMode: 'class',
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="flex items-center justify-center min-h-screen transition-all duration-300">
+
+  <div id="app-container" class="bg-white dark:bg-gray-900 shadow-lg rounded-lg p-6 w-full max-w-xl flex flex-col space-y-4">
+    <div class="flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-teal-600 dark:text-teal-400">To-Do List</h1>
+      <div class="flex items-center gap-3">
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" class="text-gray-600 hover:text-teal-600 dark:text-gray-300 dark:hover:text-teal-400">
+          <i id="theme-icon" class="fas fa-moon"></i>
+        </button>
+        <button id="clear-all" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500">
+          <i class="fas fa-trash-alt"></i> Clear All
+        </button>
       </div>
-      <ul id="taskList"></ul>
     </div>
 
-    <script src="script.js"></script>
-  </body>
+    <!-- Form -->
+    <form id="todo-form" class="space-y-4 mb-4">
+      <div class="flex flex-col sm:flex-row sm:gap-4 gap-4">
+        <input id="todo-input" type="text" placeholder="Add a new task..." class="flex-grow px-4 py-2 border rounded-md focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+        
+        <!-- Task Deadline Input -->
+        <input id="task-deadline" type="date" class="px-4 py-2 border rounded-md focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+        
+        <!-- Task Priority Dropdown -->
+        <select id="task-priority" class="px-4 py-2 border rounded-md focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      
+      <!-- Add Button -->
+      <button type="submit" class="bg-teal-500 text-white px-6 py-2 rounded-md hover:bg-teal-600 w-full sm:w-auto mx-auto">Add</button>
+    </form>
+
+    <!-- Task List -->
+    <ul id="todo-list" class="space-y-3 mb-4 overflow-y-auto max-h-96"></ul>
+    <div id="task-count" class="text-gray-600 dark:text-gray-400">Tasks Remaining: 0</div>
+  </div>
+</body>
 </html>
