@@ -1,149 +1,153 @@
-// DOM Elements
-const taskInput = document.getElementById('taskInput');
-const addTaskButton = document.getElementById('addTaskButton');
-const taskList = document.getElementById('taskList');
+ 
+    const form = document.getElementById("todo-form");
+    const input = document.getElementById("todo-input");
+    const deadlineInput = document.getElementById("task-deadline");
+    const prioritySelect = document.getElementById("task-priority");
+    const list = document.getElementById("todo-list");
+    const taskCount = document.getElementById("task-count");
+    const clearAllButton = document.getElementById("clear-all");
+    const themeToggleButton = document.getElementById("theme-toggle");
+    const themeIcon = document.getElementById("theme-icon");
+    const body = document.body;
 
-// Initialize: Load tasks from localStorage when the page is ready
-document.addEventListener('DOMContentLoaded', loadTasks);
-
-// Event Listeners
-addTaskButton.addEventListener('click', debounce(handleAddTask, 300));
-taskInput.addEventListener('keypress', (event) => {
-  if (event.key === 'Enter') {
-    debounce(handleAddTask, 300)();
-  }
-});
-
-// Add a new task
-function handleAddTask() {
-  const taskText = taskInput.value.trim();
-  if (!taskText) {
-    alert('Task cannot be empty!');
-    return;
-  }
-
-  const newTask = { task: taskText, completed: false };
-  const tasks = getTasksFromStorage();
-
-  tasks.push(newTask);
-  saveTasksToStorage(tasks);
-
-  renderTask(newTask);
-  taskInput.value = ''; // Clear the input field
-}
-
-// Display a single task
-function renderTask(task) {
-  const taskItem = document.createElement('li');
-  taskItem.classList.toggle('completed', task.completed);
-
-  taskItem.innerHTML = `
-    <span class="task-text">${task.task}</span>
-    <div class="task-actions">
-      <button class="edit">Edit</button>
-      <button class="delete">Delete</button>
-      <input type="checkbox" class="checkbox" ${task.completed ? 'checked' : ''}>
-    </div>
-  `;
-
-  // Event handlers for task actions
-  taskItem.querySelector('.edit').addEventListener('click', () => editTask(task, taskItem));
-  taskItem.querySelector('.delete').addEventListener('click', () => deleteTask(task, taskItem));
-  taskItem.querySelector('.checkbox').addEventListener('change', (e) =>
-    toggleTaskCompletion(task, taskItem, e.target.checked)
-  );
-
-  taskList.appendChild(taskItem);
-}
-
-// Edit an existing task
-function editTask(task, taskItem) {
-  const currentTextElement = taskItem.querySelector('.task-text');
-  const inputField = document.createElement('input');
-  inputField.type = 'text';
-  inputField.value = task.task;
-
-  taskItem.replaceChild(inputField, currentTextElement);
-  inputField.focus();
-
-  inputField.addEventListener('blur', () => saveEditedTask(task, taskItem, inputField));
-  inputField.addEventListener('keypress', (event) => {
-    if (event.key === 'Enter') {
-      saveEditedTask(task, taskItem, inputField);
+    // Set the theme on page load from localStorage
+    const currentTheme = localStorage.getItem("theme") || "light";
+    if (currentTheme === "dark") {
+      body.classList.add("dark");
+      body.style.backgroundColor = "#1f2937"; // Dark mode background color
+      themeIcon.classList.replace("fa-moon", "fa-sun");
+    } else {
+      body.classList.remove("dark");
+      body.style.backgroundColor = "#f3f4f6"; // Light mode background color
+      themeIcon.classList.replace("fa-sun", "fa-moon");
     }
-  });
-}
 
-// Save the edited task
-function saveEditedTask(task, taskItem, inputField) {
-  const updatedText = inputField.value.trim();
-  if (!updatedText) {
-    alert('Task cannot be empty!');
-    return;
-  }
+    // Theme toggle functionality
+    themeToggleButton.addEventListener("click", () => {
+      const isDarkMode = body.classList.contains("dark");
+      const newTheme = isDarkMode ? "light" : "dark";
+      
+      // Toggle the dark class on the body
+      body.classList.toggle("dark", newTheme === "dark");
+      
+      // Update the background color
+      body.style.backgroundColor = newTheme === "dark" ? "#1f2937" : "#f3f4f6";
+      
+      // Update the icon
+      themeIcon.classList.toggle("fa-sun", newTheme === "dark");
+      themeIcon.classList.toggle("fa-moon", newTheme === "light");
+      
+      // Save the theme preference in localStorage
+      localStorage.setItem("theme", newTheme);
+    });
 
-  task.task = updatedText;
+    // Get tasks from localStorage
+    const savedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    savedTasks.forEach(task => addTaskToList(task.text, task.completed, task.deadline, task.priority));
 
-  const tasks = getTasksFromStorage();
-  const taskIndex = tasks.findIndex((t) => t.task === task.task);
+    // Update task count
+    function updateTaskCount() {
+      const remainingTasks = Array.from(list.children).filter(task => !task.querySelector(".task-checkbox").checked).length;
+      taskCount.textContent = `Tasks Remaining: ${remainingTasks}`;
+    }
 
-  if (taskIndex !== -1) {
-    tasks[taskIndex] = task;
-    saveTasksToStorage(tasks);
-  }
+    // Handle form submission for adding a new task
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const taskText = input.value.trim();
+      const taskDeadline = deadlineInput.value;
+      const taskPriority = prioritySelect.value;
 
-  // Restore the display
-  const updatedTextElement = document.createElement('span');
-  updatedTextElement.className = 'task-text';
-  updatedTextElement.textContent = task.task;
+      if (taskText) {
+        addTaskToList(taskText, false, taskDeadline, taskPriority);
+        saveTasks();
+        input.value = "";
+        deadlineInput.value = "";
+        prioritySelect.value = "low";
+        updateTaskCount();
+      }
+    });
 
-  taskItem.replaceChild(updatedTextElement, inputField);
-}
+    // Add task to the task list
+    function addTaskToList(text, completed, deadline, priority) {
+      const listItem = document.createElement("li");
+      const priorityClasses = {
+        low: "bg-green-100 border-green-500 dark:bg-green-900 dark:border-green-700",
+        medium: "bg-yellow-100 border-yellow-500 dark:bg-yellow-900 dark:border-yellow-700",
+        high: "bg-red-100 border-red-500 dark:bg-red-900 dark:border-red-700"
+      };
 
-// Toggle task completion
-function toggleTaskCompletion(task, taskItem, isCompleted) {
-  task.completed = isCompleted;
+      listItem.className = `flex justify-between items-center px-4 py-2 rounded-md shadow-sm border-l-4 ${priorityClasses[priority]} transition-all`;
 
-  const tasks = getTasksFromStorage();
-  const taskIndex = tasks.findIndex((t) => t.task === task.task);
+      const formattedDeadline = deadline ? `Due: ${new Date(deadline).toLocaleDateString()}` : '';
 
-  if (taskIndex !== -1) {
-    tasks[taskIndex] = task;
-    saveTasksToStorage(tasks);
-  }
+      listItem.innerHTML = `
+        <div class="flex items-center gap-2">
+          <input type="checkbox" class="task-checkbox" ${completed ? "checked" : ""}>
+          <input type="text" value="${text}" readonly class="bg-transparent flex-grow outline-none ${completed ? "line-through text-gray-400" : "dark:text-white"}">
+          <span class="text-xs text-gray-500 dark:text-gray-400">${formattedDeadline}</span>
+        </div>
+        <div class="flex gap-2">
+          <button class="text-blue-500 hover:text-blue-700 edit-button"><i class="fas fa-edit"></i></button>
+          <button class="text-red-500 hover:text-red-700 delete-button"><i class="fas fa-trash"></i></button>
+        </div>
+      `;
 
-  taskItem.classList.toggle('completed', isCompleted);
-}
+      setupTaskListeners(listItem);
+      list.appendChild(listItem);
+      updateTaskCount();
+    }
 
-// Delete a task
-function deleteTask(task, taskItem) {
-  const tasks = getTasksFromStorage();
-  const updatedTasks = tasks.filter((t) => t.task !== task.task);
+    // Set up task listeners for editing, deleting, and marking as complete
+    function setupTaskListeners(task) {
+      const checkbox = task.querySelector(".task-checkbox");
+      const taskInput = task.querySelector("input[type='text']");
+      const editButton = task.querySelector(".edit-button");
+      const deleteButton = task.querySelector(".delete-button");
 
-  saveTasksToStorage(updatedTasks);
-  taskItem.remove();
-}
+      // Toggle complete status
+      checkbox.addEventListener("change", () => {
+        taskInput.classList.toggle("line-through");
+        taskInput.classList.toggle("text-gray-400");
+        saveTasks();
+        updateTaskCount();
+      });
 
-// Load tasks from localStorage
-function loadTasks() {
-  const tasks = getTasksFromStorage();
-  tasks.forEach(renderTask);
-}
+      // Edit task functionality
+      editButton.addEventListener("click", () => {
+        taskInput.readOnly = false;
+        taskInput.focus();
+        taskInput.addEventListener("blur", () => {
+          taskInput.readOnly = true;
+          saveTasks();
+        });
+      });
 
-// LocalStorage utility functions
-function getTasksFromStorage() {
-  return JSON.parse(localStorage.getItem('tasks')) || [];
-}
+      // Delete task functionality
+      deleteButton.addEventListener("click", () => {
+        list.removeChild(task);
+        saveTasks();
+        updateTaskCount();
+      });
+    }
 
-function saveTasksToStorage(tasks) {
-  localStorage.setItem('tasks', JSON.stringify(tasks));
-}
+    // Save tasks to localStorage
+    function saveTasks() {
+      const tasks = Array.from(list.children).map(task => {
+        return {
+          text: task.querySelector("input[type='text']").value,
+          completed: task.querySelector(".task-checkbox").checked,
+          deadline: task.querySelector(".text-xs") ? task.querySelector(".text-xs").textContent.replace('Due: ', '') : "",
+          priority: task.classList.contains("border-red-500") ? "high" : task.classList.contains("border-yellow-500") ? "medium" : "low"
+        };
+      });
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
 
-// Utility: Debounce function
-function debounce(func, delay) {
-  let timeout;
-  return function (...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), delay);
-  };
-}
+    // Clear all tasks functionality
+    clearAllButton.addEventListener("click", () => {
+      localStorage.removeItem("tasks");
+      list.innerHTML = "";
+      updateTaskCount();
+    });
+  
